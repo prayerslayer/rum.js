@@ -24,6 +24,20 @@
     return btoa(crypto.getRandomValues(new Uint8Array(size)))
   }
 
+  // interface around settimeout and request idle callback
+  function delay(fn, ms = 0) {
+    if (ms === 0) {
+      return requestIdleCallback(fn)
+    } else {
+      return setTimeout(fn, ms)
+    }
+  }
+
+  // interface around setinterval
+  function repeat(fn, every = 5000) {
+    return setInterval(fn, every)
+  }
+
   // bisects an array according to a condition
   // result[0] contains elements where condition = true
   // result[1] contains elements where condition = false
@@ -89,12 +103,12 @@
     // reschedule
     if (inFlight.length > 0) {
       // there are requests in flight, we are eager to collect information
-      requestIdleCallback(processAjaxQueue)
+      delay(processAjaxQueue)
       return
     }
     // there are no requests in flight, we might as well wait a long time
     // until we check again
-    setTimeout(processAjaxQueue, 15 * 1000)
+    delay(processAjaxQueue, 15 * 1000)
   }
 
   // sending non-standard memory information
@@ -108,16 +122,33 @@
 
   // starts off rum.js
   function init() {
-    // increase open tabs counter so we know when session ends
-    let openTabs = parseInt(storage.getItem(STORAGE_OPEN_TABS) || 0, 10)
-    storage.setItem(STORAGE_OPEN_TABS, openTabs + 1)
+    delay(() => {
+      // increase open tabs counter so we know when session ends
+      let openTabs = parseInt(storage.getItem(STORAGE_OPEN_TABS) || 0, 10)
+      storage.setItem(STORAGE_OPEN_TABS, openTabs + 1)
+
+      send(config, 'initial', {
+        window: selectKeys(w, [
+          'devicePixelRatio',
+          'innerWidth',
+          'innerHeight'
+        ]),
+        navigator: selectKeys(navigator, [
+          'vendor',
+          'platform',
+          'userAgent',
+          'language'
+        ]),
+        timing: performance.timing
+      })
+    })
 
     // queue first run of ajax processing
-    setTimeout(selfReschedulingProcessAjaxQueue, 5000)
+    delay(selfReschedulingProcessAjaxQueue, 5000)
 
+    // non-standard and only in chrome
     if (performance.memory) {
-      // non-standard and only in chrome
-      setInterval(processMemory, 30 * 1000)
+      repeat(processMemory, 30 * 1000)
     }
   }
 
@@ -202,19 +233,5 @@
 
   w.fetch = wrappedFetch
 
-  init()
-  send(config, 'initial', {
-    window: selectKeys(w, [
-      'devicePixelRatio',
-      'innerWidth',
-      'innerHeight'
-    ]),
-    navigator: selectKeys(navigator, [
-      'vendor',
-      'platform',
-      'userAgent',
-      'language'
-    ]),
-    timing: performance.timing
-  })
+  delay(init)
 })(window)
