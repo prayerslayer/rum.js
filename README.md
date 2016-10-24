@@ -12,6 +12,8 @@ Seriously though, how do analytics scripts work? Do they work? Let's find out.
 
 ## Questions, open issues
 
+* Probably it should somehow keep track of application route and have some counters?
+* What about measuring unique visitors?
 * More cross-browser support, ie workarounds for no `navigator.sendBeacon` and such
 * Polling for finished ajax requests isn't *that* cool, this is probs better solved with an event emitter or the like
 * How big is an analytics script allowed to be and how much data in many requests is it allowed to send before people stop using it?
